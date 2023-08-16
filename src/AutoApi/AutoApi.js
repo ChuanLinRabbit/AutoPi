@@ -196,8 +196,8 @@ function chargeByParameters(parameters, data, ApiInstance) {
         // 特殊处理body是schema以及数组schema的情况
         if (parameter.schema) {
             if (parameter.schema.type && parameter.schema.type === 'array') {
-                if (Object.prototype.toString.call(result) === '[object Array]') {
-                    // 不处理
+                if (Object.prototype.toString.call(data) === '[object Array]') {
+                    return data
                 } else {
                     result = result[parameter.name || '_Array']
                     delete result[parameter.name || '_Array']
