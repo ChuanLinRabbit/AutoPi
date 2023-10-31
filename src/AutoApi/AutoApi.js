@@ -44,7 +44,13 @@ class AutoApi {
         this.getOpenApiConfig()
         this.verifyOpenApiConfig()
         this.initApiBaseConfig()
-        this.initApiData()
+        try {
+            this.initApiData()
+        }catch (e) {
+            console.error(e)
+            console.error({url: this.url, data: this.data})
+            this.apiConfig.data = this.data
+        }
         this.readTempConfig()
     }
 
@@ -105,23 +111,22 @@ class AutoApi {
     initApiData() {
         // 展开参数配置中的映射
         let parameters = this.openApiConfig[this.apiConfig.method].parameters
-        // 校验必填与数据类型 todo 未处理请求体为纯字符与纯数字的情况
-        // 使用parameters存储请求体的情况
-        if (parameters) this.apiConfig.data = chargeByParameters(parameters, this.data, this)
-        // 使用requestBody存储请求体的情况
-        if (!parameters) {
-            let requestBody = this.openApiConfig[this.apiConfig.method].requestBody
-            if (requestBody) {
-                let refName = requestBody.content['application/json']?.schema?.$ref || requestBody.content['*/*']?.schema?.$ref
-                if (refName) {
-                    let _schema = queryDefinitionByRef(this.currentService, refName)
-                    this.apiConfig.data = chargeByDefinition(_schema, this.data, this)
-                } else {
-                    this.apiConfig.data = this.data
-                }
+        let requestBody = this.openApiConfig[this.apiConfig.method].requestBody
+        if(Object.prototype.toString.call(this.data) === '[object Array]') return this.apiConfig.data = this.data
+        // 校验必填与数据类型
+        // openApi2.0仅使用parameters
+        if(parameters) this.apiConfig.data = chargeByParameters(parameters, this.data, this)
+        // openApi3.0扩展使用requestBody
+        if(requestBody) {
+            let refName =  requestBody.content['application/json']?.schema?.$ref || requestBody.content['*/*']?.schema?.$ref
+            if(refName) {
+                let _schema = queryDefinitionByRef(this.currentService, refName)
+                this.apiConfig.data = chargeByDefinition(_schema, this.data, this)
+            }else {
+                this.apiConfig.data = this.data
             }
         }
-        // 如通过未验证执行异常处理
+        // 如通过未验证抛出异常
         this.printVerifyParameters()
     }
 
@@ -169,27 +174,42 @@ class AutoApi {
  * @param {Object} data
  * @param {Object} ApiInstance
  */
-function chargeByParameters(parameters, data, ApiInstance) {
+function chargeByParameters(parameters, data = {}, ApiInstance) {
     let result = {}
     for (let parameter of parameters) {
         // 必填校验
         if (!data || data[parameter.name] === null || data[parameter.name] === undefined) {
-            if (parameter.required && !parameter.schema) {
-                ApiInstance.warnRequiredParams.push(parameter)
-                continue
+            /**
+             * 必填校验，如果此条参数为空则进此校验
+             */
+            if(!data || data[parameter.name] === null || data[parameter.name] === undefined) {
+                // 如果名称不是schema路径设置、且为空 必定不继续判断
+                if(!parameter?.schema?.$ref) {
+                    // 名称不是schema设置、且为空、且设置必填，添加一条错误日志
+                    if(parameter.required) {
+                        ApiInstance.warnRequiredParams.push(parameter)
+                    }
+                    continue
+                }
             }
         }
         // 参数取值
-        if (parameter.schema) {
+        // 如果此条是schema设置，进行schema解析
+        if(parameter.schema) {
             let _schema = null
-            if (parameter.schema.$ref) {
+            // 如果有路径，从路径解析
+            if(parameter.schema.$ref) {
+                // 根据路径获取schema库的抽象类配置
                 _schema = queryDefinitionByRef(ApiInstance.currentService, parameter.schema.$ref)
+                // 对抽象配置再进行筛选 todo 此处步骤需进一步测试
                 result[parameter.name] = chargeByDefinition(_schema, data, ApiInstance)
-            } else {
+            }else {
+                // 没有路径，schema则是类型描述，解析类型
                 _schema = parameter.schema
                 result[parameter.name] = chargeByDefinition(_schema, data[parameter.name], ApiInstance)
             }
-        } else {
+        }else {
+            // 没有schema直接分发
             result[parameter.name] = chargeByDefinition(parameter, data[parameter.name], ApiInstance)
         }
         // 参数位置派发
@@ -200,7 +220,6 @@ function chargeByParameters(parameters, data, ApiInstance) {
                     return data
                 } else {
                     result = result[parameter.name || '_Array']
-                    delete result[parameter.name || '_Array']
                 }
             } else if (parameter.schema.$ref) {
                 Object.assign(result, result[parameter.name])
@@ -221,6 +240,7 @@ function chargeByParameters(parameters, data, ApiInstance) {
             delete result[parameter.name]
         }
         if (qsParam) {
+            if(!qs.stringify(qsParam)) continue
             if (ApiInstance.apiConfig.url.includes('?')) ApiInstance.apiConfig.url += `&${qs.stringify(qsParam)}`
             else ApiInstance.apiConfig.url += `?${qs.stringify(qsParam)}`
         }
@@ -234,7 +254,7 @@ function chargeByParameters(parameters, data, ApiInstance) {
  * @param {Object} data
  * @param {Object} ApiInstance
  */
-function chargeByDefinition(schema, data, ApiInstance) {
+function chargeByDefinition(schema, data = {}, ApiInstance) {
     if (!data && data !== 0 && data !== "" && data !== false) return null
     let result = null
     // 对象内容筛选
@@ -302,6 +322,8 @@ function chargeByDefinition(schema, data, ApiInstance) {
     } else if (schema?.type === 'integer') {
         if (typeof data === 'number') {
             return data
+        } else if(!data) {
+            return null
         } else if (!isNaN(data)) {
             return Number(data)
         } else {
