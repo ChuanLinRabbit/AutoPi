@@ -1,6 +1,6 @@
 {
   "name": "auto-pi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "send http request easier",
   "main": "./dist/AutoPi.js",
   "module": "./dist/AutoPi.esm.js",
@@ -10,8 +10,6 @@
   ],
   "scripts": {
     "dev": "rollup -w -c",
-    "build:types": "tsc -b ./tsconfig.json",
-    "build:ts": "npm run build:types && rollup -c",
     "build": "rollup -c",
     "build:tsc": "npx -p typescript tsc src/index.js --declaration --allowJs --emitDeclarationOnly --outDir dist/types"
   },
