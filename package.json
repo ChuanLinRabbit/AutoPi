@@ -1,7 +1,7 @@
 {
   "name": "auto-pi",
   "version": "0.1.2",
-  "description": "send http request easier",
+  "description": "send http request easier by openApi",
   "main": "./dist/AutoPi.js",
   "module": "./dist/AutoPi.esm.js",
   "types": "./dist/types/index.d.ts",
@@ -18,7 +18,7 @@
     "url": "https://github.com/ChuanLinRabbit/AutoPi"
   },
   "keywords": [
-    "utils"
+    "utils", "http", "axios", "openApi"
   ],
   "author": "ChuanLinRabbit",
   "license": "MIT License",
@@ -28,7 +28,7 @@
   "bugs": {
     "url": ""
   },
-  "homepage": "",
+  "homepage": "https://github.com/ChuanLinRabbit/AutoPi",
   "dependencies": {
     "qs": "^6.11.2"
   },
