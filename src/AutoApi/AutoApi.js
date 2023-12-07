@@ -90,7 +90,8 @@ class AutoApi {
         let {url, apiConfig, currentService, data, tempConfig, openApiConfig} = this
         // url
         // 拼接微服务名
-        apiConfig.url = currentService.basePath + url
+        if(currentService.basePath && currentService.basePath !== '/') apiConfig.url = currentService.basePath + url
+        else apiConfig.url = url
         // 根据动态url中{键名}进行复制
         while (/(\{\w+\})/.test(apiConfig.url)) {
             apiConfig.url = apiConfig.url.replace(RegExp.$1, data[RegExp.$1.substring(1, RegExp.$1.length - 1)])

@@ -8,16 +8,17 @@ import typescript from "@rollup/plugin-typescript";
 export default [
     {
         input: './src/index.js',
+        external: ['qs'],
         output: [{
-            dir: 'dist',
+            dir: 'core',
             format: 'cjs',
             entryFileNames: 'AutoPi.cjs.js',
         },{
-            dir: 'dist',
+            dir: 'core',
             format: 'esm',
             entryFileNames: 'AutoPi.esm.js',
         },{
-            dir: 'dist',
+            dir: 'core',
             format: 'umd',
             entryFileNames: 'AutoPi.js',
             name: 'AutoPi'
